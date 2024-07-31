@@ -1,4 +1,5 @@
 from .math_module import xp, _scipy, ensure_np_array
+from .imshows import imshow1, imshow2, imshow3
 
 import numpy as np
 import scipy
@@ -233,15 +234,3 @@ def measure_pixelscale(sin_im, cpa,
 
     return pixelscale_lamD
 
-def create_annular_control_mask(npsf, pxscl, iwa=3, owa=12, edge=None, rotation=0, centered=True):
-    if centered:
-        x = xp.linspace(-npsf/2, npsf/2-1, npsf)*pxscl
-    else:
-        x = (xp.linspace(-npsf/2, npsf/2-1, npsf) + 1/2)*pxscl
-    x,y = xp.meshgrid(x,x)
-    r = xp.hypot(x, y)
-    control_mask = (r < owa) * (r > iwa)
-    if edge is not None: control_mask *= (x > edge)
-
-    control_mask = _scipy.ndimage.rotate(control_mask, rotation, reshape=False, order=0)
-    return control_mask
