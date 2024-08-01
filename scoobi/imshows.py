@@ -1,5 +1,5 @@
 from .math_module import xp, _scipy, ensure_np_array
-from .import utils
+import scoobi.utils as utils
 
 import numpy as np
 import scipy

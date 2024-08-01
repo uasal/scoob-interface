@@ -1,7 +1,5 @@
 from .math_module import xp, _scipy, ensure_np_array
-from .utils import pad_or_crop
-import scoobi
-module_path = Path(os.path.dirname(os.path.abspath(scoobi.__file__)))
+import scoobi.utils as utils
 
 import numpy as np
 import scipy
@@ -17,6 +15,9 @@ from scoobpy import utils as scoob_utils
 import purepyindi
 import purepyindi2
 from magpyx.utils import ImageStream
+
+import scoobi
+module_path = Path(os.path.dirname(os.path.abspath(scoobi.__file__)))
 
 def move_psf(x_pos, y_pos, client):
     client.wait_for_properties(['stagepiezo.stagepupil_x_pos', 'stagepiezo.stagepupil_y_pos'])
@@ -46,37 +47,13 @@ def set_zwo_roi(xc, yc, npix, client, delay=0.25):
     client['scicam.roi_set.request'] = purepyindi.SwitchState.ON
     time.sleep(delay)
 
-def set_zwo_exp_time(exp_time, client, delay=0.1):
-    client.wait_for_properties(['scicam.exptime'])
-    client['scicam.exptime.target'] = exp_time
-    time.sleep(delay)
-
-def get_zwo_exp_time(client):
-    client.wait_for_properties(['scicam.exptime'])
-    return client['scicam.exptime.current']
-
-def set_zwo_emgain(gain, client, delay=0.1):
-    client.wait_for_properties(['scicam.emgain'])
-    client['scicam.emgain.target'] = gain
-    time.sleep(delay)
-
-def get_zwo_emgain(client):
-    client.wait_for_properties(['scicam.emgain'])
-    return client['scicam.emgain.current']
-
-def set_fib_atten(value, client, delay=0.1):
-    client['fiberatten.atten.target'] = value
-    time.sleep(delay)
-
-def get_fib_atten(client):
-    return client['fiberatten.atten.current']
-
 # define more functions for moving the fold mirror, using the tip tilt mirror, and the polarizers
 
 class SCOOBI():
 
     def __init__(self, 
                  dm_channel,
+                 wfe_channel=None,
                  scicam_channel=None,
                  locam_channel=None,
                  dm_ref=np.zeros((34,34)),
@@ -90,8 +67,8 @@ class SCOOBI():
         self.SCICAM = ImageStream(scicam_channel) if scicam_channel is not None else None
         self.LOCAM = ImageStream(locam_channel) if locam_channel is not None else None
 
-        self.dm_channel = dm_channel
         self.DM = scoob_utils.connect_to_dmshmim(channel=dm_channel) # channel used for writing to DM
+        self.DM_WFE = scoob_utils.connect_to_dmshmim(channel=wfe_channel) if wfe_channel is not None else None
         self.DMT = scoob_utils.connect_to_dmshmim(channel='dm00disp') # the total shared memory image
         self.dm_delay = 0.1
 
@@ -186,11 +163,20 @@ class SCOOBI():
         self.DM.write( 1e6*(dm_state + ensure_np_array(dm_command)) )
         time.sleep(self.dm_delay)
                
-    def get_dm(self, total=False):
-        if total:
-            return xp.array(self.DMT.grab_latest())/1e6
-        else:
-            return xp.array(self.DM.grab_latest())/1e6
+    def get_dm(self):
+        return xp.array(self.DM.grab_latest())/1e6
+    
+    def set_dm_wfe(self, wfe_command):
+        self.DM_WFE.write(ensure_np_array(wfe_command)*1e6)
+        time.sleep(self.dm_delay)
+    
+    def add_dm_wfe(self, wfe_command):
+        dm_state = ensure_np_array(self.get_dm_wfe())
+        self.DM_WFE.write( 1e6*(dm_state + ensure_np_array(wfe_command)) )
+        time.sleep(self.dm_delay)
+               
+    def get_dm_wfe(self):
+        return xp.array(self.DM_WFE.grab_latest())/1e6
     
     def close_dm(self):
         self.DM.close()

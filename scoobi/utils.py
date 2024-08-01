@@ -1,5 +1,5 @@
 from .math_module import xp, _scipy, ensure_np_array
-from .imshows import imshow1, imshow2, imshow3
+import scoobi.imshows as imshows
 
 import numpy as np
 import scipy
@@ -158,8 +158,7 @@ def measure_center_and_angle(waffle_im, psf_pixelscale_lamD, im_thresh=1e-4, r_t
         patches = []
         for i in range(4):
             patches.append(Circle(centroids[i], 1, fill=False, color='black'))
-        imshow3(waffle_mask, waffle_im, waffle_mask*waffle_im, lognorm2=True, vmin2=1e-5,
-                patches1=patches)
+        imshows.imshow3(waffle_mask, waffle_im, waffle_mask*waffle_im, lognorm2=True, vmin2=1e-5, patches1=patches)
 
     mean_angle = 0.0
     for i in range(4):
@@ -206,7 +205,7 @@ def measure_pixelscale(sin_im, cpa,
     y,x = (xp.indices((npsf, npsf)) - npsf//2)
     r = xp.sqrt(x**2 + y**2)
     sin_mask = (sin_im >im_thresh) * (r>r_thresh)
-    imshow2(sin_mask, sin_mask*sin_im)
+    imshows.imshow2(sin_mask, sin_mask*sin_im)
 
     centroids = []
     for i in [0,1]:
@@ -225,8 +224,7 @@ def measure_pixelscale(sin_im, cpa,
         patches = []
         for i in range(2):
             patches.append(Circle(centroids[i], 1, fill=True, color='black'))
-        imshow3(sin_mask, sin_im, sin_mask*sin_im, lognorm2=True, vmin2=1e-5,
-                patches1=patches)
+        imshows.imshow3(sin_mask, sin_im, sin_mask*sin_im, lognorm2=True, vmin2=1e-5, patches1=patches)
 
     sep_pix = np.sqrt((centroids[1][0] - centroids[0][0])**2 + (centroids[1][1] - centroids[0][1])**2)
     pixelscale_lamD = (2*cpa) / sep_pix * lyot_diam/(dm_diam * dm_lyot_mag)
