@@ -146,8 +146,10 @@ class SCOOBI():
         self.return_ni = False
         self.return_ni_locam = False
         
-
     def set_zwo_exp_time(self, exp_time, client, delay=0.25):
+        if exp_time<3.2e-5:
+            print('Minimum exposure time is 3.2E-5 seconds. Setting exposure time to minimum.')
+            exp_time = 3.2e-5
         client.wait_for_properties(['camsci.exptime'])
         client['camsci.exptime.target'] = exp_time
         time.sleep(delay)
@@ -212,10 +214,10 @@ class SCOOBI():
 
     def snap(self, normalize=False, plot=False, vmin=None):
         if self.Nframes>1:
-            ims = self.camsci.grab_many(self.Nframes)
+            ims = self.SCICAM.grab_many(self.Nframes)
             im = np.sum(ims, axis=0)/self.Nframes
         else:
-            im = self.camsci.grab_latest()
+            im = self.SCICAM.grab_latest()
         
         im = xp.array(im)
         im = _scipy.ndimage.shift(im, (self.y_shift, self.x_shift), order=0)
