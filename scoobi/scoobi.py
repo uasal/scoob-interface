@@ -145,6 +145,29 @@ class SCOOBI():
 
         self.return_ni = False
         self.return_ni_locam = False
+
+    def set_fib_atten(self, value, client, delay=0.1):
+        client['fiberatten.atten.target'] = value
+        time.sleep(delay)
+        self.att = value
+        print(f'Set the fiber attenuation to {value:.1f}')
+
+    def set_nsv_exp_time(self, exp_time, client, delay=0.25):
+        if exp_time<1e-4:
+            print('Minimum exposure time is 1E-4 seconds. Setting exposure time to minimum.')
+            exp_time = 1e-4
+        client.wait_for_properties(['nsv571.exptime'])
+        client['nsv571.exptime.target'] = exp_time
+        time.sleep(delay)
+        self.texp_locam = exp_time
+        print(f'Set the NSV571 exposure time to {self.texp_locam:.2e}s')
+
+    def set_nsv_gain(self, gain, client, delay=0.25):
+        client.wait_for_properties(['nsv571.emgain'])
+        client['nsv571.emgain.target'] = gain
+        time.sleep(delay)
+        self.gain_locam = gain
+        print(f'Set the NSV571 gain to {self.texp_locam:.2e}s')
         
     def set_zwo_exp_time(self, exp_time, client, delay=0.25):
         if exp_time<3.2e-5:
@@ -156,30 +179,12 @@ class SCOOBI():
         self.texp = exp_time
         print(f'Set the ZWO exposure time to {self.texp:.2e}s')
 
-    def set_fib_atten(self, value, client, delay=0.1):
-        client['fiberatten.atten.target'] = value
-        time.sleep(delay)
-        self.att = value
-        print(f'Set the fiber attenuation to {value:.1f}')
-
     def set_zwo_emgain(self, gain, client, delay=0.1):
         client.wait_for_properties(['camsci.emgain'])
         client['camsci.emgain.target'] = gain
         time.sleep(delay)
         self.gain = gain
         print(f'Set the ZWO gain setting to {gain:.1f}')
-
-    def set_locam_exp_time(self, exp_time, delay=0.1):
-        # client['nsvcam.exptime.target'] = value
-        self.texp_locam = exp_time
-        print(f'Set the LOCAM exposure time to {self.texp:.2e}s')
-
-    def set_locam_emgain(self, gain, delay=0.1):
-        # client.wait_for_properties(['nsvcam.emgain'])
-        # client['nsvcam.emgain.target'] = gain
-        # time.sleep(delay)
-        self.gain_locam = gain
-        print(f'Set the LOCAM gain setting to {gain:.1f}')
 
     def zero_dm(self):
         self.DM.write(np.zeros(self.dm_shape))
