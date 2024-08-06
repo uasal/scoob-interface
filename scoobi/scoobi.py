@@ -186,6 +186,23 @@ class SCOOBI():
         self.gain = gain
         print(f'Set the ZWO gain setting to {gain:.1f}')
 
+    '''
+    Placeholders for FSM functionality
+
+    def zero_fsm(self):
+        self.FSM.write(np.zeros(3))
+
+    def set_fsm(self, volts):
+        self.FSM.write(ensure_np_array(volts))
+
+    def add_fsm(self, volts):
+        fsm_state = self.get_fsm()
+        self.FSM.write(ensure_np_array(volts) + fsm_state)
+
+    def get_fsm(self):
+        return self.FSM.grab_latest()
+    '''
+    
     def zero_dm(self):
         self.DM.write(np.zeros(self.dm_shape))
         time.sleep(self.dm_delay)
