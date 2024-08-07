@@ -32,10 +32,8 @@ class scipy_backend:
 
         return getattr(self._srcmodule, key)
     
-if poppy.accel_math._USE_CUPY:
-    import cupy as cp
-    import cupyx.scipy
-    xp = np_backend(cp)
+if cupy_avail:
+    xp = np_backend(cupy)
     _scipy = scipy_backend(cupyx.scipy)
 else:
     xp = np_backend(np)
