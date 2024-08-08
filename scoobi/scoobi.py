@@ -26,6 +26,11 @@ def move_psf(x_pos, y_pos, client):
     scoob_utils.move_relative(client, 'stagepiezo.stagepupil_y_pos', y_pos)
     time.sleep(0.25)
 
+def home_block(client, delay=2):
+    client.wait_for_properties(['stagelinear.home'])
+    client['stagelinear.home.request'] = purepyindi.SwitchState.ON
+    time.sleep(delay)
+
 def move_block_in(client, delay=2):
     client.wait_for_properties(['stagelinear.presetName'])
     client['stagelinear.presetName.block_in'] = purepyindi.SwitchState.ON
