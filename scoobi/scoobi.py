@@ -1,5 +1,6 @@
 from .math_module import xp, _scipy, ensure_np_array
 import scoobi.utils as utils
+import scoobi.imshows as imshows
 
 import numpy as np
 import scipy
@@ -10,6 +11,9 @@ import time
 import copy
 import os
 from pathlib import Path
+from IPython.display import clear_output
+from datetime import datetime
+today = int(datetime.today().strftime('%Y%m%d'))
 
 from scoobpy import utils as scoob_utils
 import purepyindi
@@ -184,7 +188,7 @@ class SCOOBI():
         self.texp = exp_time
         print(f'Set the ZWO exposure time to {self.texp:.2e}s')
 
-    def set_zwo_emgain(self, gain, client, delay=0.1):
+    def set_zwo_gain(self, gain, client, delay=0.1):
         client.wait_for_properties(['camsci.emgain'])
         client['camsci.emgain.target'] = gain
         time.sleep(delay)
@@ -293,6 +297,52 @@ class SCOOBI():
             im = self.normalize_locam(im)
 
         return im
+    
+def stream_scicam(I, duration=None, control_mask=None, plot=False, clear=True, save_data_to=None):
+    I.subtract_dark = True
+    I.return_ni = True
+
+    all_ims = []
+
+    if duration is None:
+        try:
+            print('Streaming camsci data ...')
+            i = 0
+            while True:
+                im = I.snap()
+                i += 1
+                if save_data_to is not None:
+                    all_ims.append(im)
+                if control_mask is not None:
+                    mean_ni = xp.mean(im[control_mask])
+                    print(f'Mean NI = {mean_ni:.2e}')
+                if plot:
+                    imshows.imshow1(im, lognorm=True, vmin=1e-9)
+                if clear:
+                    clear_output(wait=True)
+        except KeyboardInterrupt:
+            print('Stopping camsci stream!')
+        if save_data_to is not None:
+            scoobi.utils.save_fits(save_data_to, xp.array(all_ims), quiet=True)
+    else:
+        print('Streaming camsci data ...')
+        i = 0
+        start = time.time()
+        while (time.time()-start)<duration:
+            im = I.snap()
+            i += 1
+            if save_data_to is not None:
+                all_ims.append(im)
+            if control_mask is not None:
+                mean_ni = xp.mean(im[control_mask])
+                print(f'Mean NI = {mean_ni:.2e}')
+            if plot:
+                imshows.imshow1(im, lognorm=True, vmin=1e-9)
+            if clear:
+                clear_output(wait=True)
+        if save_data_to is not None:
+            scoobi.utils.save_fits(save_data_to, xp.array(all_ims), quiet=True)
+
     
 # def snap_many(images, Nframes_per_exp, exp_times, gains, plot=False):
 #     total_im = 0.0
