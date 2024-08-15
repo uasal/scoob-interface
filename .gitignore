@@ -4,3 +4,4 @@ dist/
 scoobi.egg-info/
 *.ipynb_checkpoints
 data/
+camsci-streams/
