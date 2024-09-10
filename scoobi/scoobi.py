@@ -139,9 +139,10 @@ class SCOOBI():
         self.texp_locam = 1
         self.gain_locam = 1
 
-        self.Imax_ref = 1
-        self.texp_ref = 1
-        self.gain_ref = 1
+        # self.Imax_ref = 1
+        # self.texp_ref = 1
+        # self.gain_ref = 1
+        self.ref_psf_params = None
         self.texp_locam_ref = 1
         self.gain_locam_ref = 1
         self.att_ref = 1
@@ -236,11 +237,17 @@ class SCOOBI():
         self.DM.close()
 
     def normalize(self, image):
-        image_ni = image/self.Imax_ref
-        image_ni *= (self.texp_ref/self.texp)
-        image_ni *= 10**((self.att-self.att_ref)/10)
-        image_ni *= 10**(-self.gain/20 * 0.1) / 10**(-self.gain_ref/20 * 0.1)
-        # gain ~ 10^(-gain_setting/20 * 0.1)
+        # image_ni = image/self.Imax_ref
+        # image_ni *= (self.texp_ref/self.texp)
+        # image_ni *= 10**((self.att-self.att_ref)/10)
+        # image_ni *= 10**(-self.gain/20 * 0.1) / 10**(-self.gain_ref/20 * 0.1)
+        # gain ~ 10^(-gain_setting/20 * 0.1) 
+        if self.ref_psf_params is None:
+            raise ValueError('Cannot normalize because reference PSF not specified.')
+        image_ni = image/self.ref_psf_params['Imax']
+        image_ni *= (self.ref_psf_params['texp']/self.texp)
+        image_ni *= 10**((self.att-self.ref_psf_params['atten'])/10)
+        image_ni *= 10**(-self.gain/20 * 0.1) / 10**(-self.ref_psf_params['gain']/20 * 0.1)
         return image_ni
 
     def snap(self, normalize=False, plot=False, vmin=None):
@@ -298,33 +305,12 @@ class SCOOBI():
 
         return im
     
-def stream_scicam(I, duration=None, control_mask=None, plot=False, clear=True, save_data_to=None):
+def stream_scicam(I, duration=60, control_mask=None, plot=False, clear=True, save_data_to=None):
     I.subtract_dark = True
     I.return_ni = True
 
     all_ims = []
-
-    if duration is None:
-        try:
-            print('Streaming camsci data ...')
-            i = 0
-            while True:
-                im = I.snap()
-                i += 1
-                if save_data_to is not None:
-                    all_ims.append(im)
-                if control_mask is not None:
-                    mean_ni = xp.mean(im[control_mask])
-                    print(f'Mean NI = {mean_ni:.2e}')
-                if plot:
-                    imshows.imshow1(im, lognorm=True, vmin=1e-9)
-                if clear:
-                    clear_output(wait=True)
-        except KeyboardInterrupt:
-            print('Stopping camsci stream!')
-        if save_data_to is not None:
-            scoobi.utils.save_fits(save_data_to, xp.array(all_ims), quiet=True)
-    else:
+    try:
         print('Streaming camsci data ...')
         i = 0
         start = time.time()
@@ -340,8 +326,10 @@ def stream_scicam(I, duration=None, control_mask=None, plot=False, clear=True, s
                 imshows.imshow1(im, lognorm=True, vmin=1e-9)
             if clear:
                 clear_output(wait=True)
-        if save_data_to is not None:
-            scoobi.utils.save_fits(save_data_to, xp.array(all_ims), quiet=True)
+    except KeyboardInterrupt:
+        print('Stopping camsci stream!')
+    if save_data_to is not None:
+        scoobi.utils.save_fits(save_data_to, xp.array(all_ims))
 
     
 # def snap_many(images, Nframes_per_exp, exp_times, gains, plot=False):
