@@ -133,19 +133,14 @@ class SCOOBI():
         self.x_shift_locam = 0
         self.y_shift_locam = 0
 
-        self.att = 1
+        self.atten = 1
         self.texp = 1
         self.gain = 1
         self.texp_locam = 1
         self.gain_locam = 1
-
-        # self.Imax_ref = 1
-        # self.texp_ref = 1
-        # self.gain_ref = 1
+        
         self.ref_psf_params = None
-        self.texp_locam_ref = 1
-        self.gain_locam_ref = 1
-        self.att_ref = 1
+        self.ref_locam_params = None
 
         self.df = None
         self.subtract_dark = False
@@ -156,10 +151,16 @@ class SCOOBI():
         self.return_ni = False
         self.return_ni_locam = False
 
+        self.fsm_L = 12*u.mm # distance between FSM piezo actuators
+        self.fsm_B = self.fsm_L * np.cos(30*u.degree) # baseline distance of three piezos
+        # self.FSM = ImageStream('fsm')
+        # self.fsm_bias = np.array([[50,50,50]]).transpose()
+        # self.FSM.write(self.fsm_bias)
+
     def set_fib_atten(self, value, client, delay=0.1):
         client['fiberatten.atten.target'] = value
         time.sleep(delay)
-        self.att = value
+        self.atten = value
         print(f'Set the fiber attenuation to {value:.1f}')
 
     def set_nsv_exp_time(self, exp_time, client, delay=0.25):
@@ -233,20 +234,46 @@ class SCOOBI():
     def get_dm(self):
         return xp.array(self.DM.grab_latest())/1e6
     
+    # FSM functions
+    def get_fsm_volts(self, tip, tilt, dZ=0, verbose=False):
+        '''
+        tip and tilt are assumed to be in units of radians
+        '''
+        dA = self.get_A(tip, dZ)
+        dB = self.get_B(tip, tilt, dZ)
+        dC = self.get_C(tip, tilt, dZ)
+        if verbose: print(f'Displacements: A = {dA:.2e}, {dB:.2e}, {dC:.2e}. ')
+
+        dvA = (dA/self.fsm_d_per_v).decompose().value
+        dvB = (dB/self.fsm_d_per_v).decompose().value
+        dvC = (dC/self.fsm_d_per_v).decompose().value
+        if verbose: print(f'Delta Voltages: A = {dvA:.2f}, B = {dvB:.2f}, C = {dvC:.2f}. ')
+
+        return dvA, dvB, dvC
+
+    def get_A(self, alpha, Z):
+        return (Z + 2./3. * self.fsm_B * alpha).to_value(u.m)
+
+    def get_B(self, alpha, beta, Z):
+        return (0.5 * self.fsm_L * beta + Z - 1./3. * self.fsm_B * alpha).to(u.m)
+
+    def get_C(self, alpha, beta, Z):
+        return (Z - 1./3. * self.fsm_B * alpha - 1./2. * self.fsm_L * beta).to(u.m)
+
+    def add_fsm(self, tip, tilt, dZ=0):
+        va, vb, vc = self.get_fsm_volts(tip, tilt, dZ)
+        fsm_state = self.FSM.grab_latest()
+        self.FSM.write( fsm_state +  np.array([[va,vb,vc]]).transpose())
+    
     def close_dm(self):
         self.DM.close()
 
     def normalize(self, image):
-        # image_ni = image/self.Imax_ref
-        # image_ni *= (self.texp_ref/self.texp)
-        # image_ni *= 10**((self.att-self.att_ref)/10)
-        # image_ni *= 10**(-self.gain/20 * 0.1) / 10**(-self.gain_ref/20 * 0.1)
-        # gain ~ 10^(-gain_setting/20 * 0.1) 
         if self.ref_psf_params is None:
             raise ValueError('Cannot normalize because reference PSF not specified.')
         image_ni = image/self.ref_psf_params['Imax']
         image_ni *= (self.ref_psf_params['texp']/self.texp)
-        image_ni *= 10**((self.att-self.ref_psf_params['atten'])/10)
+        image_ni *= 10**((self.atten-self.ref_psf_params['atten'])/10)
         image_ni *= 10**(-self.gain/20 * 0.1) / 10**(-self.ref_psf_params['gain']/20 * 0.1)
         return image_ni
 
@@ -271,8 +298,8 @@ class SCOOBI():
         return im
     
     def normalize_locam(self, image):
-        image_ni = image * (self.texp_locam_ref/self.texp_locam)
-        image_ni *= 10**((self.att-self.att_ref)/10)
+        image_ni = image * (self.ref_locam_params['texp']/self.texp_locam)
+        image_ni *= 10**((self.atten-self.ref_locam_params['atten'])/10)
         # image_ni *= 10**(-self.gain_locam/20 * 0.1) / 10**(-self.gain_locam_ref/20 * 0.1)
         return image_ni
 
