@@ -124,8 +124,8 @@ class SCOOBI():
         self.psf_pixelscale = 3.76e-6*u.m/u.pix
         self.psf_pixelscale_lamD = 0.307
         self.nbits = 16
-        self.Nframes = 1
-        self.Nframes_locam = 1
+        self.NSCICAM = 1
+        self.NLOCAM = 1
         self.npsf = npsf
         self.nlocam = 100
         self.x_shift = 0
@@ -213,6 +213,11 @@ class SCOOBI():
     def get_fsm(self):
         return self.FSM.grab_latest()
     '''
+    def getattr(self, attr):
+        return getattr(self, attr)
+    
+    def setattr(self, attr, val):
+        setattr(self, attr, val)
     
     def zero_dm(self):
         self.DM.write(np.zeros(self.dm_shape))
@@ -278,9 +283,9 @@ class SCOOBI():
         return image_ni
 
     def snap(self, normalize=False, plot=False, vmin=None):
-        if self.Nframes>1:
-            ims = self.SCICAM.grab_many(self.Nframes)
-            im = np.sum(ims, axis=0)/self.Nframes
+        if self.NSCICAM>1:
+            ims = self.SCICAM.grab_many(self.NSCICAM)
+            im = np.sum(ims, axis=0)/self.NSCICAM
         else:
             im = self.SCICAM.grab_latest()
         
@@ -304,22 +309,12 @@ class SCOOBI():
         return image_ni
 
     def snap_locam(self):
-        im = self.LOCAM.grab_latest()
-        im = scipy.ndimage.shift(im, (self.y_shift_locam, self.x_shift_locam), order=0)
-        im = utils.pad_or_crop(im, self.nlocam)
+        if self.NLOCAM>1:
+            ims = self.LOCAM.grab_many(self.NLOCAM)
+            im = np.sum(ims, axis=0)/self.NLOCAM
+        else:
+            im = self.LOCAM.grab_latest()
 
-        if self.subtract_dark_locam and self.df_locam is not None:
-            im -= self.df_locam
-            im[im<0] = 0.0
-            
-        if self.return_ni_locam:
-            im = self.normalize_locam(im)
-
-        return im
-    
-    def stack_locam(self):
-        ims = self.LOCAM.grab_many(self.Nframes_locam)
-        im = np.sum(ims, axis=0)/self.Nframes_locam
         im = scipy.ndimage.shift(im, (self.y_shift_locam, self.x_shift_locam), order=0)
         im = utils.pad_or_crop(im, self.nlocam)
 

@@ -107,6 +107,14 @@ def save_fits(fpath, data, header=None, ow=True, quiet=False):
     hdu.writeto(str(fpath), overwrite=ow) 
     if not quiet: print('Saved data to: ', str(fpath))
 
+def load_fits(fpath, header=False):
+    data = xp.array(fits.getdata(fpath))
+    if header:
+        hdr = fits.getheader(fpath)
+        return data, hdr
+    else:
+        return data
+
 # functions for saving python objects
 def save_pickle(fpath, data, quiet=False):
     out = open(str(fpath), 'wb')
