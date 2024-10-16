@@ -19,9 +19,18 @@ from scoobpy import utils as scoob_utils
 import purepyindi
 import purepyindi2
 from magpyx.utils import ImageStream
+import ImageStreamIOWrap as shmio
 
 import scoobi
 module_path = Path(os.path.dirname(os.path.abspath(scoobi.__file__)))
+
+def create_shmim(name, dims, dtype=shmio.ImageStreamIODataType.FLOAT, shared=1, nbkw=8):
+    # if ImageStream objects didn't auto-open on creation, you could create and return that instead. oops.
+    img = shmio.Image()
+    # not sure if I should try to destroy first in case it already exists
+    # img.create(name, dims, dtype, shared, nbkw)
+    buffer = np.zeros(dims)
+    img.create(name, buffer, -1, True, 8, 1, dtype, 1)
 
 def move_psf(x_pos, y_pos, client):
     client.wait_for_properties(['stagepiezo.stagepupil_x_pos', 'stagepiezo.stagepupil_y_pos'])
