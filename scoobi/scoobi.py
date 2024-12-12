@@ -101,12 +101,11 @@ class SCOOBI():
                  dm_ref=np.zeros((34,34)),
                  npsf=150,
                 ):
-        self.wavelength_c = 633e-9*u.m
+        self.wavelength_c = 633e-9
         
         self.SCICAM = ImageStream(scicam_channel) if scicam_channel is not None else None
         self.LOCAM = ImageStream(locam_channel) if locam_channel is not None else None
         self.DM = scoob_utils.connect_to_dmshmim(channel=dm_channel) # channel used for writing to DM
-        # self.DM_WFE = scoob_utils.connect_to_dmshmim(channel=wfe_channel) if wfe_channel is not None else None
         self.DMT = scoob_utils.connect_to_dmshmim(channel='dm00disp') # the total shared memory image
         self.dm_delay = 0.1
 
@@ -131,7 +130,7 @@ class SCOOBI():
 
         # Init camera settings
         self.psf_pixelscale = 3.76e-6*u.m/u.pix
-        self.psf_pixelscale_lamD = 0.307
+        self.psf_pixelscale_lamDc = 0.307
         self.nbits = 16
         self.NSCICAM = 1
         self.NLOCAM = 1
@@ -222,6 +221,7 @@ class SCOOBI():
     def get_fsm(self):
         return self.FSM.grab_latest()
     '''
+    
     def getattr(self, attr):
         return getattr(self, attr)
     
