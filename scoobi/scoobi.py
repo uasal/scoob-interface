@@ -135,7 +135,7 @@ class SCOOBI():
         self.NSCICAM = 1
         self.NLOCAM = 1
         self.npsf = npsf
-        self.nlocam = 100
+        self.nlocam = self.LOCAM.shape[0] if locam_channel is not None else None
         self.x_shift = 0
         self.y_shift = 0
         self.x_shift_locam = 0
@@ -170,23 +170,6 @@ class SCOOBI():
         time.sleep(delay)
         self.atten = value
         print(f'Set the fiber attenuation to {value:.1f}')
-
-    def set_nsv_exp_time(self, exp_time, client, delay=0.25):
-        if exp_time<1e-4:
-            print('Minimum exposure time is 1E-4 seconds. Setting exposure time to minimum.')
-            exp_time = 1e-4
-        client.wait_for_properties(['nsv571.exptime'])
-        client['nsv571.exptime.target'] = exp_time
-        time.sleep(delay)
-        self.texp_locam = exp_time
-        print(f'Set the NSV571 exposure time to {self.texp_locam:.2e}s')
-
-    def set_nsv_gain(self, gain, client, delay=0.25):
-        client.wait_for_properties(['nsv571.emgain'])
-        client['nsv571.emgain.target'] = gain
-        time.sleep(delay)
-        self.gain_locam = gain
-        print(f'Set the NSV571 gain to {self.texp_locam:.2e}s')
         
     def set_zwo_exp_time(self, exp_time, client, delay=0.25):
         if exp_time<3.2e-5:
@@ -205,9 +188,49 @@ class SCOOBI():
         self.gain = gain
         print(f'Set the ZWO gain setting to {gain:.1f}')
 
+    def set_nsv_exp_time(self, exp_time, client, delay=0.25):
+        if exp_time<1e-4:
+            print('Minimum exposure time is 1E-4 seconds. Setting exposure time to minimum.')
+            exp_time = 1e-4
+        client.wait_for_properties(['camnsv.exptime'])
+        client['camnsv.exptime.target'] = exp_time
+        time.sleep(delay)
+        self.texp_locam = exp_time
+        print(f'Set the NSV571 exposure time to {self.texp_locam:.2e}s')
+
+    def set_nsv_gain(self, gain, client, delay=0.25):
+        client.wait_for_properties(['camnsv.emgain'])
+        client['camnsv.emgain.target'] = gain
+        time.sleep(delay)
+        self.gain_locam = gain
+        print(f'Set the NSV571 gain to {self.texp_locam:.2e}s')
+
     '''
     Placeholders for FSM functionality
+    def get_fsm_volts(self, tip, tilt, dZ=0, verbose=False):
+        # tip and tilt are assumed to be in units of radians
+        
+        dA = self.get_A(tip, dZ)
+        dB = self.get_B(tip, tilt, dZ)
+        dC = self.get_C(tip, tilt, dZ)
+        if verbose: print(f'Displacements: A = {dA:.2e}, {dB:.2e}, {dC:.2e}. ')
 
+        dvA = (dA/self.fsm_d_per_v).decompose().value
+        dvB = (dB/self.fsm_d_per_v).decompose().value
+        dvC = (dC/self.fsm_d_per_v).decompose().value
+        if verbose: print(f'Delta Voltages: A = {dvA:.2f}, B = {dvB:.2f}, C = {dvC:.2f}. ')
+
+        return dvA, dvB, dvC
+
+    def get_A(self, alpha, Z):
+        return (Z + 2./3. * self.fsm_B * alpha).to_value(u.m)
+
+    def get_B(self, alpha, beta, Z):
+        return (0.5 * self.fsm_L * beta + Z - 1./3. * self.fsm_B * alpha).to(u.m)
+
+    def get_C(self, alpha, beta, Z):
+        return (Z - 1./3. * self.fsm_B * alpha - 1./2. * self.fsm_L * beta).to(u.m)
+        
     def zero_fsm(self):
         self.FSM.write(np.zeros(3))
 
@@ -247,37 +270,6 @@ class SCOOBI():
                
     def get_dm(self):
         return xp.array(self.DM.grab_latest())/1e6
-    
-    # FSM functions
-    def get_fsm_volts(self, tip, tilt, dZ=0, verbose=False):
-        '''
-        tip and tilt are assumed to be in units of radians
-        '''
-        dA = self.get_A(tip, dZ)
-        dB = self.get_B(tip, tilt, dZ)
-        dC = self.get_C(tip, tilt, dZ)
-        if verbose: print(f'Displacements: A = {dA:.2e}, {dB:.2e}, {dC:.2e}. ')
-
-        dvA = (dA/self.fsm_d_per_v).decompose().value
-        dvB = (dB/self.fsm_d_per_v).decompose().value
-        dvC = (dC/self.fsm_d_per_v).decompose().value
-        if verbose: print(f'Delta Voltages: A = {dvA:.2f}, B = {dvB:.2f}, C = {dvC:.2f}. ')
-
-        return dvA, dvB, dvC
-
-    def get_A(self, alpha, Z):
-        return (Z + 2./3. * self.fsm_B * alpha).to_value(u.m)
-
-    def get_B(self, alpha, beta, Z):
-        return (0.5 * self.fsm_L * beta + Z - 1./3. * self.fsm_B * alpha).to(u.m)
-
-    def get_C(self, alpha, beta, Z):
-        return (Z - 1./3. * self.fsm_B * alpha - 1./2. * self.fsm_L * beta).to(u.m)
-
-    def add_fsm(self, tip, tilt, dZ=0):
-        va, vb, vc = self.get_fsm_volts(tip, tilt, dZ)
-        fsm_state = self.FSM.grab_latest()
-        self.FSM.write( fsm_state +  np.array([[va,vb,vc]]).transpose())
     
     def close_dm(self):
         self.DM.close()
@@ -336,7 +328,7 @@ class SCOOBI():
 
         return im
     
-def stream_scicam(I, duration=60, control_mask=None, plot=False, clear=True, save_data_to=None):
+def stream_scicam(I, duration=60, control_mask=None, plot=False, clear=True, fname=None):
     I.subtract_dark = True
     I.return_ni = True
 
@@ -348,7 +340,7 @@ def stream_scicam(I, duration=60, control_mask=None, plot=False, clear=True, sav
         while (time.time()-start)<duration:
             im = I.snap()
             i += 1
-            if save_data_to is not None:
+            if fname is not None:
                 all_ims.append(im)
             if control_mask is not None:
                 mean_ni = xp.mean(im[control_mask])
@@ -359,8 +351,17 @@ def stream_scicam(I, duration=60, control_mask=None, plot=False, clear=True, sav
                 clear_output(wait=True)
     except KeyboardInterrupt:
         print('Stopping camsci stream!')
-    if save_data_to is not None:
-        scoobi.utils.save_fits(save_data_to, xp.array(all_ims))
+
+    
+    if fname is not None:
+        data = {
+            'duration':duration,
+            'control_mask':control_mask,
+            'texp_per_frame':I.texp,
+            'N_frames_per_im':I.NSCICAM,
+            'camsci_ims':xp.array(all_ims),
+        }
+        scoobi.utils.save_pickle(fname, data)
 
     
 # def snap_many(images, Nframes_per_exp, exp_times, gains, plot=False):

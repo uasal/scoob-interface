@@ -143,7 +143,7 @@ def measure_center_and_angle(waffle_im, psf_pixelscale_lamD, im_thresh=1e-4, r_t
     npsf = waffle_im.shape[0]
     y,x = (xp.indices((npsf, npsf)) - npsf//2)*psf_pixelscale_lamD
     r = xp.sqrt(x**2 + y**2)
-    waffle_mask = (waffle_im >im_thresh) * (r>r_thresh)
+    waffle_mask = (waffle_im > im_thresh) * (r>r_thresh)
 
     centroids = []
     for i in [0,1]:
