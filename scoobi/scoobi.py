@@ -328,7 +328,41 @@ class SCOOBI():
 
         return im
     
-def stream_scicam(I, duration=60, control_mask=None, plot=False, clear=True, fname=None):
+# def stream_scicam(I, duration=60, control_mask=None, plot=False, clear=True, fname=None):
+#     I.subtract_dark = True
+#     I.return_ni = True
+
+#     all_ims = []
+#     try:
+#         print('Streaming camsci data ...')
+#         i = 0
+#         start = time.time()
+#         while (time.time()-start)<duration:
+#             im = I.snap()
+#             i += 1
+#             if fname is not None:
+#                 all_ims.append(im)
+#             if control_mask is not None:
+#                 mean_ni = xp.mean(im[control_mask])
+#                 print(f'Mean NI = {mean_ni:.2e}')
+#             if plot:
+#                 imshows.imshow1(im, lognorm=True, vmin=1e-9)
+#             if clear:
+#                 clear_output(wait=True)
+#     except KeyboardInterrupt:
+#         print('Stopping camsci stream!')
+
+#     if fname is not None:
+#         data = {
+#             'duration':duration,
+#             'control_mask':control_mask,
+#             'texp_per_frame':I.texp,
+#             'N_frames_per_im':I.NSCICAM,
+#             'camsci_ims':xp.array(all_ims),
+#         }
+#         scoobi.utils.save_pickle(fname, data)
+
+def stream_scicam(I, duration, control_mask, fname=None):
     I.subtract_dark = True
     I.return_ni = True
 
@@ -339,20 +373,12 @@ def stream_scicam(I, duration=60, control_mask=None, plot=False, clear=True, fna
         start = time.time()
         while (time.time()-start)<duration:
             im = I.snap()
-            i += 1
-            if fname is not None:
-                all_ims.append(im)
-            if control_mask is not None:
-                mean_ni = xp.mean(im[control_mask])
-                print(f'Mean NI = {mean_ni:.2e}')
-            if plot:
-                imshows.imshow1(im, lognorm=True, vmin=1e-9)
-            if clear:
-                clear_output(wait=True)
+            all_ims.append(im)
+            print(f'Mean NI = {xp.mean(im[control_mask]):.2e}')
+            clear_output(wait=True)
     except KeyboardInterrupt:
         print('Stopping camsci stream!')
 
-    
     if fname is not None:
         data = {
             'duration':duration,

@@ -267,7 +267,7 @@ def imshow3(arr1, arr2, arr3,
     if axlims3 is not None:
         ax[2].set_xlim(axlims3[:2])
         ax[2].set_ylim(axlims3[2:])
-    if grid or grid3: ax[1].grid()
+    if grid or grid3: ax[2].grid()
     ax[2].tick_params(axis='x', labelsize=9, rotation=30)
     ax[2].tick_params(axis='y', labelsize=9, rotation=30)
     ax[2].set_xlabel(xlabel3)
